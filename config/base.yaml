@@ -1,0 +1,343 @@
+---
+# *Default configuration to simplify experiment setup
+defaults:
+  - _self_
+  # - atk_config: ??? # Define attack config in child config file
+  - override hydra/job_logging: rich  # Use our custom rich logging
+
+# *Aggregator
+aggregator: unweighted_fedavg
+
+# *Specify if the attack is enabled
+no_attack: False
+
+# *Specify bengin client class and defense client class (if any)
+benign_clients: ??? # placeholder that is set during runtime after selecting malicious clients
+
+# *Training mode
+training_mode: parallel # Choose from [parallel, sequential]
+
+# *Debug mode (Not works for non-IID datasets (FEMNIST, REDDIT, SENTIMENT140))
+debug: False
+debug_fraction_data: 0.1 # Only use a portion of the data in debug mode
+
+# *Resource configuration for each client
+cuda_visible_devices: 1,2,4,5,6
+num_cpus: 1
+num_gpus: 0.5
+
+# *Reproducibility
+seed: 4000
+deterministic: False
+
+# *Simulation configuration
+num_rounds: 600
+num_clients: 100
+num_clients_per_round: 10
+federated_evaluation: False # Whether to perform federated evaluation (evaluate global model on client's validation set)
+federated_val_split: 0.0 # Validation split for each client's dataset (should be > 0 if federated evaluation is True)
+
+# *Cross-silo FL configuration
+cross_silo: false # Enable cross-silo FL mode (same clients participate every round)
+cross_silo_num_clients: 10 # Total number of clients for cross-silo (only used when cross_silo=true)
+cross_silo_num_attackers: 2 # Number of attackers for cross-silo (only used when cross_silo=true)
+
+# *Dataset distribution configuration
+dataset: ??? # CIFAR10, CIFAR100, TinyImageNet, MNIST
+datapath: data
+partitioner: dirichlet # Choose from [uniform, dirichlet]
+alpha: 0.4 # Dirichlet distribution parameter
+normalize: True # Normalize the dataset
+
+# *Model configuration
+model: ???
+pretrain_model_path: Null # A weight path (.pth) | "IMAGENET1K_V2" | Null. This model_path is loaded only if checkpoint is Null.
+num_classes: ???
+
+# *Test configuration
+test_batch_size: 512
+num_workers: 4 # Number of workers for dataloader
+pin_memory: True
+test_every: 1 # Test every x rounds
+
+# *Default local training configuration (passed to clients during training)
+client_config:
+  # Training configuration
+  dataset: ${dataset}
+  local_epochs: 2
+  batch_size: 64
+  mixed_precision: True   # Use mixed precision and grad scaling during training
+  timeout: Null # Timeout for each client training (in seconds)
+  optimizer: sgd # Choose from the key in optimizer section below. Will be overridden to store DictConfig in client_optimizer_config
+  lr: 0.1 
+  weight_decay: 5e-4
+  momentum: 0.9
+  val_split: ${federated_val_split} # split of the training data to be used for validation
+  seed: ${seed}  # Reproducibility
+  deterministic: ${deterministic}
+  training_mode: ${training_mode}
+
+# *Setting to resume model training (weight and other parameters are loaded).
+# *See the full list of parameters in the save_best_model function in server.py
+# *Note: If checkpoint is "wandb", the weight will be loaded from wandb
+
+#* Save checkpoints
+save_model: True # Save the model to run directory in outputs folder
+save_checkpoint: True # Save the model as checkpoints in checkpoints folder (corresponding to Dataset, Model, and Strategy)
+save_model_rounds: [200, 400, 600, 800, 1000] # Save the model at the specified rounds
+
+# *Resume from checkpoint
+# There are 3 ways to resume:
+# 1. checkpoint is a round number, the weight will be loaded from the checkpoints folder corresponding to Dataset, Model, and Strategy
+# E.g: checkpoint: 200, the weight will be loaded from the path ./checkpoints/CIFAR10_ResNet18_unweighted_fedavg/model_200.pth
+# 2. checkpoint is "wandb", the weight will be loaded from wandb
+# 3. checkpoint is a weight path (.pth), the weight will be loaded from the path
+# If checkpoint is Null, the weight will not be loaded
+checkpoint: Null # A number (round) | weight path (.pth) | "wandb" (load from wandb) | Null
+
+# *Logging configuration
+save_logging: csv # Choose from [wandb, csv (save to table), both (wandb & csv), Null (no save logging)]
+# Add a name tag to the run name --> Final run name: {name}_{name_tag}
+name_tag: ""
+# Add a directory tag to csv file and log file --> Final path: {dir_tag}/{dir_path}
+dir_tag: ${eval:"'${dataset}_${aggregator}_noattack' if ${no_attack} else '${dataset}_${aggregator}_${atk_config.model_poison_method}(${atk_config.data_poison_method})'"}
+
+wandb:
+  entity: ??? # Optional, load from .env file
+  project: ??? # Optional, load from .env file
+  name: ??? # Automatically set during runtime (See init_wandb() method)
+  mode: online
+  save_model: False # Whether to save the model to wandb
+  save_model_round: -1 # Default: Save model at last round
+
+# *Visualization
+plot_data_distribution: False
+plot_client_selection: False
+progress_bar: True
+
+###############7903916#########################################
+# *Aggregator configuration
+aggregator_config:
+  weighted_fedavg:
+    _target_: backfed.servers.WeightedFedAvgServer
+    eta: 1
+
+  unweighted_fedavg:
+    _target_: backfed.servers.UnweightedFedAvgServer
+    eta: 0.5
+
+  fedprox:
+    _target_: backfed.servers.FedProxServer
+    proximal_mu: 0.01
+
+  foolsgold:
+    _target_: backfed.servers.FoolsGoldServer
+    confidence: 1
+
+  coordinate_median:
+    _target_: backfed.servers.CoordinateMedianServer
+
+  geometric_median:
+    _target_: backfed.servers.GeometricMedianServer
+
+  trimmed_mean:
+    _target_: backfed.servers.TrimmedMeanServer
+    trim_ratio: 0.2
+
+  norm_clipping:
+    _target_: backfed.servers.NormClippingServer
+    clipping_norm: 3
+    eta: 0.5
+
+  robustlr:
+    _target_: backfed.servers.RobustLRServer
+    robustLR_threshold: 8.0
+    eta: 0.5
+
+  krum:
+    _target_: backfed.servers.KrumServer
+    eta: 0.5
+
+  multi_krum:
+    _target_: backfed.servers.MultiKrumServer
+    oracle: True # If true, we assume the number of malicious clients is known
+    eta: 0.5
+
+  ad_multi_krum:
+    _target_: backfed.servers.ADMultiKrumServer # Multi-krum initialized as AnomalyDetectionServer
+    eta: 0.5
+
+  weakdp:
+    _target_: backfed.servers.WeakDPServer
+    strategy: unweighted_fedavg
+    std_dev: 0.025
+    clipping_norm: 5
+    eta: 0.5
+
+  deepsight:
+    _target_: backfed.servers.DeepSightServer
+    num_seeds: 3
+    num_samples: 20000
+    deepsight_batch_size: 1000
+    deepsight_tau: 0.3333
+    eta: 0.5
+
+  flame:
+    _target_: backfed.servers.FlameServer
+    lamda: 0.001
+    eta: 0.5
+
+  rflbat:
+    _target_: backfed.servers.RFLBATServer
+    eps1: 10.0
+    eps2: 4.0
+    save_plots: False
+    eta: 0.5
+
+  fldetector:
+    _target_: backfed.servers.FLDetectorServer
+    window_size: 10  # Size of sliding window for detection
+    eta: 0.5
+
+  fltrust:
+    _target_: backfed.servers.FLTrustServer
+    m: 100 # Number of server's root data samples
+    eta: 0.5
+
+  flare:
+    _target_: backfed.servers.FlareServer
+    voting_threshold: 0.5
+    m: 10 # Number of auxiliary data samples
+    aux_class: 5 # The class used as auxiliary data
+    eta: 0.5
+
+  localdp:
+    _target_: backfed.servers.LocalDPServer
+    clipping_norm: 5
+    std_dev: 0.01
+    eta: 0.5
+
+  fera_visualize:
+    # MULTI-COMPONENT FILTERING DEFENSE
+    # Computes 5 per-client metrics and applies configurable filters
+    # Supports 4 independently configurable filter components
+    # Supports two filter variants: v1 (original) and v2 (simplified)
+    _target_: backfed.servers.FeraVisualizeServer
+    eta: 0.5
+    
+    # Filter variant selection
+    filter_variant: v1  # "v1" (original multi-component) or "v2" (simplified)
+
+    # V1 flagged-client treatment
+    # "discard" — exclude flagged updates (original behaviour, default)
+    # "project" — Benign Subspace Projection: replace flagged delta with its
+    #             projection onto the mean benign delta, norm-capped to median
+    #             benign norm.  Prevents backdoor accumulation without discarding.
+    flagged_client_treatment: discard
+
+    # V2 Post-Processing: Clipping and Noise (V2 only)
+    enable_clipping: true  # Enable clipping for flagged malicious clients (V2 only, default: true)
+    clip_percentage: 0.6  # Percentage of median to clip malicious updates to (0.6 = 60%, default: 0.6)
+    enable_adaptive_noise: false  # Enable noise addition after aggregation (V2 only, default: false)
+    noise_mode: adaptive  # Noise mode: "adaptive" or "fixed" (default: adaptive)
+    noise_lambda: 0.01  # Lambda for adaptive noise (default: 0.01, increase to 0.05-0.1 for stronger noise)
+    noise_std: 0.05  # Std dev for fixed noise mode (default: 0.05, increase to 0.1-0.2 for stronger noise)
+    
+    # Root dataset parameters
+    root_size: 64  # Number of samples for representation extraction
+    epsilon: 1e-12  # Numerical stability constant
+    feature_dim: 512  # Expected feature dimension (512 for ResNet18)
+    
+    # Eigenvalue metrics parameters
+    top_k_eigenvalues: 5  # Number of top eigenvalues to track for visualization (default: 5)
+    effective_rank_threshold: 0.9  # Variance percentage threshold for effective rank (default: 0.9 = 90%)
+    
+    # Layer selection for feature extraction
+    extraction_layer: penultimate  # Single layer: 'penultimate', 'layer2', 'layer3', 'layer4'
+    extraction_layers: null  # Multi-layer: ['layer2', 'layer3', 'penultimate'] or null
+    combine_layers_method: mean  # How to combine multi-layer: 'mean', 'max', 'min'
+    
+    # OOD root dataset
+    use_ood_root_dataset: false  # Whether to use OOD dataset for root samples
+    ood_root_dataset_name: null  # Explicit OOD dataset name (e.g., 'CIFAR100') or null (auto-detect)
+    
+    # Parameter change counting
+    param_change_threshold: 0.0  # Threshold for counting parameter changes (0.0 = count all)
+    
+    # Combined score weights (must sum to 1.0)
+    spectral_weight: 0.6  # Weight for spectral norm in combined score
+    delta_weight: 0.4  # Weight for delta norm in combined score
+    
+    # Filter Component 1: Default Detection (always enabled)
+    default_filter:
+      enabled: true
+      combined_threshold: 0.50    # Bottom 50%
+      tda_threshold: 0.50         # Bottom 50% (UPDATED from 40%)
+      mutual_sim_threshold: 0.70  # Top 30% (≥70%)
+    
+    # Filter Component 2: Collusion Attackers Filter
+    collusion_filter:
+      enabled: false
+      mutual_sim_top_percent: 0.40  # Top 40% mutual similarity
+      tda_top_percent: 0.40         # Top 40% TDA
+    
+    # Filter Component 3: Outlier Filter
+    outlier_filter:
+      enabled: false
+      # Flags clients in BOTH highest AND lowest extremes
+    
+    # Filter Component 4: Scaled Norm Filter
+    scaled_norm_filter:
+      enabled: false
+      spectral_ratio_threshold: 100.0  # Flag if ratio > threshold
+
+    # ── Variant 3: Principled Efficient + Collusion-Robust Defense ───────
+    # filter_variant: v3  to activate
+    #
+    # Three principled improvements over V1 — NO oracle knowledge:
+    #   Q2 (scalability):
+    #     - Repr-space mutual similarity: reuses already-computed feature deltas
+    #       (n×D_rep ≈ 32K) vs full parameters (~11M for ResNet-18) → ~330× cheaper
+    #     - Dual-form spectral: n×n Gram (n=64) vs D×D covariance (D=512) → ~64×
+    #   Q3 (thresholds): SAME percentile thresholds as V1 (50/50/70).  Percentile
+    #     rank is data-driven per round — inherently adapts to distribution without
+    #     oracle knowledge.
+    #   Q4 (collusion): residual collusion filter detects Chameleon-style attacks
+    #     using only the update vectors provided to the server each round.
+    #
+    # Residual collusion filter:
+    v3_residual_sim_thresh: 0.70  # Residual cosine sim threshold
+    v3_min_colluders: 2           # Min group size to trigger collusion flag
+    v3_deviation_thresh: 0.25     # Residual centroid norm / mean residual norm
+    v3_norm_ratio_thresh: 100.0   # Spectral ratio threshold (norm-inflation)
+    v3_use_dual_spectral: true    # Use n×n Gram form (fast) vs D×D covariance (exact)
+
+########################################################
+# *Optimizer configuration
+client_optimizer_config:
+  sgd: # Default for CIFAR10, CIFAR100, EMNIST, TinyImageNet
+    _target_: torch.optim.SGD
+    lr: ${client_config.lr}
+    weight_decay: ${client_config.weight_decay}
+    momentum: ${client_config.momentum}
+  adam:
+    _target_: torch.optim.Adam
+    lr: ${client_config.lr}
+    weight_decay: ${client_config.weight_decay}
+  adamw:
+    _target_: torch.optim.AdamW
+    lr: ${client_config.lr}
+    weight_decay: ${client_config.weight_decay}
+
+########################################################
+# *Hydra configuration
+hydra:
+  job:
+    chdir: False  # Prevent Hydra from changing working directory
+  run:
+    dir: ./outputs/${dir_tag}/${now:%Y-%m-%d-%H-%M-%S}
+  sweep:
+    dir: ./multirun/${dir_tag}/${now:%Y-%m-%d-%H-%M-%S}
+    subdir: ${hydra.job.num}
+    # dir: ./multirun/${dir_tag}/${now:%Y-%m-%d-%H-%M-%S}/${hydra.job.override_dirname}
+    # subdir: ${hydra.job.num}
