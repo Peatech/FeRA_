@@ -7,7 +7,7 @@ defaults:
 
 # *Aggregator
 aggregator: unweighted_fedavg
-checkpoint: checkpoints/CIFAR10_unweighted_fedavg/ResNet18_round_2000_dir_0.5.pth
+checkpoint: checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
 
 # *Specify if the attack is enabled
 no_attack: False
