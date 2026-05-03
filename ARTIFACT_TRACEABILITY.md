@@ -1,4 +1,4 @@
-# Artifact Traceability — FeRA
+# FeRA
 
 **Checkpoints.** A small sample checkpoint is included only to enable a quick local run:
 
