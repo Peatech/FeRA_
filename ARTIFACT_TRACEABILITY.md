@@ -1,10 +1,10 @@
 # FeRA Experiments
 
-**Checkpoints.** A sample checkpoint (CIFAR-10, α=0.5, seed=42, round 2000) is included to enable a quick local run:
+**Checkpoints.** A sample checkpoint is included to enable a quick local run:
 
 `checkpoints/CIFAR10_unweighted_fedavg_0.5/resnet18_round_2000_dir_0.9.pth`
 
-Full pretraining checkpoints (IID α=0.9, CIFAR-100, Tiny-ImageNet, etc.) are stored on institutional systems and are not redistributed here, to preserve anonymity. Attack experiments must use the **same seed** that was used for pretraining so that the data partition is consistent (`seed=42` for the included checkpoint).
+Full pretraining checkpoints are stored on institutional systems and are not redistributed here, to preserve anonymity. Attack experiments must use the **same seed** that was used for pretraining so that the data partition is consistent (`seed=42` for the included checkpoint).
 
 **Seeds.** Reported results aggregate runs over multiple random seeds (e.g. 42, 123, 1337, 2024).
 
@@ -338,7 +338,7 @@ python main.py --config-name cifar10 \
   aggregator_config.fera_visualize.collusion_filter.enabled=false \
   aggregator_config.fera_visualize.outlier_filter.enabled=false \
   aggregator_config.fera_visualize.scaled_norm_filter.enabled=true \
-  aggregator_config.fera_visualize.scaled_norm_filter.k_mad=<50|100|150|200> \
+  aggregator_config.fera_visualize.scaled_norm_filter.k_mad=<5|6|7|150> \
   alpha=0.5 num_rounds=100 seed=<SEED> \
   checkpoint=path_to_checkpoint
 ```
