@@ -1,10 +1,10 @@
 # FeRA Experiments
 
-**Checkpoints.** A small sample checkpoint is included only to enable a quick local run:
+**Checkpoints.** A sample checkpoint (CIFAR-10, α=0.5, seed=42, round 2000) is included to enable a quick local run:
 
-`checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth`
+`checkpoints/CIFAR10_unweighted_fedavg_0.5/resnet18_round_2000_dir_0.9.pth`
 
-Full pretraining checkpoints used in the paper are stored on institutional systems and are not redistributed here, to preserve anonymity.
+Full pretraining checkpoints (IID α=0.9, CIFAR-100, Tiny-ImageNet, etc.) are stored on institutional systems and are not redistributed here, to preserve anonymity. Attack experiments must use the **same seed** that was used for pretraining so that the data partition is consistent (`seed=42` for the included checkpoint).
 
 **Seeds.** Reported results aggregate runs over multiple random seeds (e.g. 42, 123, 1337, 2024).
 
