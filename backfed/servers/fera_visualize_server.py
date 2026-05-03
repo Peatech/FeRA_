@@ -147,7 +147,7 @@ class FeraVisualizeServer(AnomalyDetectionServer):
         }
         self.scaled_norm_filter = scaled_norm_filter or {
             'enabled': False,
-            'spectral_ratio_threshold': 100.0
+            'k_mad': 6.0  # flag if r_i > median(r) + k_mad * MAD(r)
         }
         
                                                        
@@ -457,24 +457,21 @@ class FeraVisualizeServer(AnomalyDetectionServer):
     ) -> set:
         
         spectral_norms = all_metrics['spectral_norm']
-        
-                                                     
+
         median_spectral = np.median(list(spectral_norms.values()))
-        
-                                
         if median_spectral < self.epsilon:
             return set()
-        
-                                                 
-        threshold = self.scaled_norm_filter['spectral_ratio_threshold']
-        malicious = set()
-        
-        for cid, spectral_norm in spectral_norms.items():
-            spectral_ratio = spectral_norm / median_spectral
-            if spectral_ratio > threshold:
-                malicious.add(cid)
-        
-        return malicious
+
+        # Spectral ratio r_i = spectral_norm_i / median (Eq. spectral-ratio in paper)
+        ratios = {cid: sn / median_spectral for cid, sn in spectral_norms.items()}
+        ratio_vals = np.array(list(ratios.values()))
+        median_ratio = np.median(ratio_vals)
+        mad = np.median(np.abs(ratio_vals - median_ratio))
+
+        # Flag if r_i > median(r) + k_mad * MAD(r)  (paper Norm-Inflation criterion)
+        k = self.scaled_norm_filter.get('k_mad', 6.0)
+        threshold = median_ratio + k * mad
+        return {cid for cid, r in ratios.items() if r > threshold}
     
     def _filter_consistency_v2(
         self,
@@ -535,24 +532,19 @@ class FeraVisualizeServer(AnomalyDetectionServer):
     ) -> set:
         
         spectral_norms = all_metrics['spectral_norm']
-        
-                                      
+
         median_spectral = np.median(list(spectral_norms.values()))
-        
-                                
         if median_spectral < self.epsilon:
             return set()
-        
-                                       
-        threshold = 100.0
-        malicious = set()
-        
-        for cid, spectral_norm in spectral_norms.items():
-            spectral_ratio = spectral_norm / median_spectral
-            if spectral_ratio > threshold:
-                malicious.add(cid)
-        
-        return malicious
+
+        ratios = {cid: sn / median_spectral for cid, sn in spectral_norms.items()}
+        ratio_vals = np.array(list(ratios.values()))
+        median_ratio = np.median(ratio_vals)
+        mad = np.median(np.abs(ratio_vals - median_ratio))
+
+        k = self.scaled_norm_filter.get('k_mad', 6.0)
+        threshold = median_ratio + k * mad
+        return {cid for cid, r in ratios.items() if r > threshold}
     
     def _clip_malicious_updates(
         self,
@@ -1593,6 +1585,9 @@ class FeraVisualizeServer(AnomalyDetectionServer):
                 cosine_sim = (dot_product / (client_norm * global_norm)).item()
                 
                                            
+                # DAS (Directional Alignment Score): cosine similarity between client
+                # and global update delta, scaled to [0,1].  Previously referred to
+                # as TDA (Targeted Directional Attention) in earlier drafts.
                 das_score = (cosine_sim + 1.0) / 2.0
                 das_scores[cid] = das_score
                 
