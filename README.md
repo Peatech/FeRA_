@@ -5,7 +5,6 @@ Code release for the paper above: federated learning with the FeRA defense (`fer
 ## Requirements
 
 - Python 3.10+ (tested with 3.11)
-- CUDA optional; set `CUDA_VISIBLE_DEVICES` before launch if using GPUs
 - Install dependencies: `pip install -r requirements.txt`
 
 ## Data
@@ -44,8 +43,6 @@ Commands use `aggregator=<DEFENCE>`, `atk_config.model_poison_method=<ATTACK>`, 
 | `robustlr` | Robust learning rate (RLR) |
 | `deepsight` | DeepSight |
 
-Other aggregators in `base.yaml` (e.g. `fedprox`, `krum`, `fldetector`) are available but not used in the main paper tables.
-
 **`<ATTACK>`** — `atk_config.model_poison_method=` must be a **key** under `model_poison_config` in the chosen `atk_config` file. For [`config/atk_config/cifar10_multishot.yaml`](config/atk_config/cifar10_multishot.yaml) the defined keys are:
 
 | Value | Client type |
@@ -56,7 +53,6 @@ Other aggregators in `base.yaml` (e.g. `fedprox`, `krum`, `fldetector`) are avai
 | `chameleon` | Chameleon |
 | `adaptive_badnet` | Adaptive BadNet |
 
-Some [`ARTIFACT_TRACEABILITY.md`](ARTIFACT_TRACEABILITY.md) lines use `model_poison_method=iba` or `=a3fl`. Those names must exist under `model_poison_config` in the same YAML (add an entry with `_target_: backfed.clients.MaliciousClient` if you need parity with the paper’s full config).
 
 **`<TRIGGER>`** — `atk_config.data_poison_method=` must be a **key** under `data_poison_config` in the same file. For `cifar10_multishot`:
 
