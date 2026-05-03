@@ -51,7 +51,8 @@ class FeraVisualizeServer(AnomalyDetectionServer):
                                                                                   
                                                                                    
                                                                                        
-        flagged_client_treatment: str = "discard",
+        log_ranked_metric_tables: bool = False,
+        flagged_client_treatment: str = "project",
                                           
         enable_clipping: bool = True,                                                                          
         clip_percentage: float = 0.6,                                                                               
@@ -89,8 +90,8 @@ class FeraVisualizeServer(AnomalyDetectionServer):
        
         super().__init__(server_config, server_type, eta, **kwargs)
         self.verbose_detection_logging = False
+        self.log_ranked_metric_tables = log_ranked_metric_tables
 
-                                                           
         self.filter_variant = filter_variant
         self.flagged_client_treatment = flagged_client_treatment
 
@@ -135,7 +136,7 @@ class FeraVisualizeServer(AnomalyDetectionServer):
             'enabled': True,
             'combined_threshold': 0.50,
             'das_threshold': 0.50,
-            'mutual_sim_threshold': 0.70
+            'mutual_sim_threshold': 0.60
         }
         self.collusion_filter = collusion_filter or {
             'enabled': False,
@@ -146,7 +147,7 @@ class FeraVisualizeServer(AnomalyDetectionServer):
             'enabled': False
         }
         self.scaled_norm_filter = scaled_norm_filter or {
-            'enabled': False,
+            'enabled': True,
             'k_mad': 6.0  # flag if r_i > median(r) + k_mad * MAD(r)
         }
         
@@ -709,7 +710,8 @@ class FeraVisualizeServer(AnomalyDetectionServer):
         malicious_clients: List[int],
         benign_clients: List[int]
     ):
-        
+        if not self.log_ranked_metric_tables:
+            return
         filter_bits = ",".join(f"{fn}:{sorted(m)}" for fn, m in malicious_sets)
         log(INFO, f"[Round {self.current_round}] FeRA filters=[{filter_bits}] flagged={sorted(malicious_clients)} benign={sorted(benign_clients)}")
 
@@ -722,9 +724,22 @@ class FeraVisualizeServer(AnomalyDetectionServer):
             log(WARNING, "No client updates found, using global model")
             return False
 
+        if self.log_ranked_metric_tables:
+            log(INFO, "")
+            log(INFO, "═══════════════════════════════════════════════")
+            log(INFO, f"  FeRA Visualize Metrics - Round {self.current_round}")
+            log(INFO, "═══════════════════════════════════════════════")
+
         try:
             all_metrics = self._compute_all_metrics(client_updates)
             self._save_metrics_csvs(all_metrics, self.current_round)
+            if self.log_ranked_metric_tables:
+                log(INFO, "")
+                log(INFO, f"✓ Metrics saved to: {self.metrics_output_dir}")
+                log(INFO, "═══════════════════════════════════════════════")
+                log(INFO, "")
+            else:
+                log(INFO, f"FeRA metrics round {self.current_round}: written under {self.metrics_output_dir}")
         except Exception as e:
             log(WARNING, f"Failed to compute metrics: {str(e)}")
             log(WARNING, "Proceeding with aggregation anyway...")

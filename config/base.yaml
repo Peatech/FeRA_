@@ -225,12 +225,16 @@ aggregator_config:
     # Filter variant selection
     filter_variant: v1  # "v1" (original multi-component) or "v2" (simplified)
 
+    # Large ASCII ranked metric tables per round (Slurm stdout). Metrics + CSVs are
+    # always computed; set true only when debugging visually.
+    log_ranked_metric_tables: false
+
     # V1 flagged-client treatment
-    # "discard" — exclude flagged updates (original behaviour, default)
-    # "project" — Benign Subspace Projection: replace flagged delta with its
+    # "discard" — exclude flagged updates entirely
+    # "project" — Benign Subspace Projection (BSP): replace flagged delta with its
     #             projection onto the mean benign delta, norm-capped to median
     #             benign norm.  Prevents backdoor accumulation without discarding.
-    flagged_client_treatment: discard
+    flagged_client_treatment: project
 
     # V2 Post-Processing: Clipping and Noise (V2 only)
     enable_clipping: true  # Enable clipping for flagged malicious clients (V2 only, default: true)
@@ -269,7 +273,7 @@ aggregator_config:
       enabled: true
       combined_threshold: 0.50
       das_threshold: 0.50
-      mutual_sim_threshold: 0.70
+      mutual_sim_threshold: 0.60
     
     collusion_filter:
       enabled: false
@@ -284,7 +288,7 @@ aggregator_config:
     # Filter Component 4: Norm-Inflation Filter
     # Flags client i if r_i > median(r) + k_mad * MAD(r), where r_i = spectral_norm_i / median_spectral
     scaled_norm_filter:
-      enabled: false
+      enabled: true
       k_mad: 6.0
 
 
