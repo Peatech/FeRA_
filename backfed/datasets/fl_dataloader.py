@@ -319,9 +319,16 @@ class FL_DataLoader:
         Args:
             cache_file_path (str): Path to save the cached data split
         """
-        # Pin the numpy state so the Dirichlet draw is the same regardless of
-        # what random operations (e.g. malicious-client selection) ran before.
+        # Isolate the Dirichlet split generation from the global RNG state so
+        # the resulting split is identical whether or not malicious-client
+        # selection (or any other prior operation) advanced the RNG.  We save
+        # and restore both numpy and Python random states to avoid any side
+        # effects on per-round client selection later in training.
+        _np_state  = np.random.get_state()
+        _py_state  = random.getstate()
         np.random.seed(self.config.seed)
+        random.seed(self.config.seed)
+
         sample_indices = list(range(len(self.trainset)))
         sample_cids = list(range(self.config.num_clients))
 
@@ -341,6 +348,10 @@ class FL_DataLoader:
                 indices=sample_indices)
         else:
             raise ValueError(f"Partitioner {self.config.partitioner} is not supported.")
+
+        # Restore global RNG states so downstream operations are unaffected.
+        np.random.set_state(_np_state)
+        random.setstate(_py_state)
         
                                         
         try:
