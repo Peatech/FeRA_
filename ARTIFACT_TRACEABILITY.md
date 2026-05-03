@@ -338,7 +338,7 @@ python main.py --config-name cifar10 \
   aggregator_config.fera_visualize.collusion_filter.enabled=false \
   aggregator_config.fera_visualize.outlier_filter.enabled=false \
   aggregator_config.fera_visualize.scaled_norm_filter.enabled=true \
-  aggregator_config.fera_visualize.scaled_norm_filter.spectral_ratio_threshold=<50|100|200|500> \
+  aggregator_config.fera_visualize.scaled_norm_filter.k_mad=<50|100|150|200> \
   alpha=0.5 num_rounds=100 seed=<SEED> \
   checkpoint=path_to_checkpoint
 ```

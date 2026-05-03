@@ -286,10 +286,9 @@ aggregator_config:
       # Flags clients in BOTH highest AND lowest extremes
     
     # Filter Component 4: Norm-Inflation Filter
-    # Flags client i if r_i > median(r) + k_mad * MAD(r), where r_i = spectral_norm_i / median_spectral
     scaled_norm_filter:
       enabled: true
-      k_mad: 6.0
+      k_mad: 150.0
 
 
     # Residual collusion filter:

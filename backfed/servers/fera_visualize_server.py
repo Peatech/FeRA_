@@ -148,7 +148,7 @@ class FeraVisualizeServer(AnomalyDetectionServer):
         }
         self.scaled_norm_filter = scaled_norm_filter or {
             'enabled': True,
-            'k_mad': 6.0  # flag if r_i > median(r) + k_mad * MAD(r)
+            'k_mad': 150.0
         }
         
                                                        
@@ -469,8 +469,7 @@ class FeraVisualizeServer(AnomalyDetectionServer):
         median_ratio = np.median(ratio_vals)
         mad = np.median(np.abs(ratio_vals - median_ratio))
 
-        # Flag if r_i > median(r) + k_mad * MAD(r)  (paper Norm-Inflation criterion)
-        k = self.scaled_norm_filter.get('k_mad', 6.0)
+        k = self.scaled_norm_filter.get('k_mad', 150.0)
         threshold = median_ratio + k * mad
         return {cid for cid, r in ratios.items() if r > threshold}
     
@@ -543,7 +542,7 @@ class FeraVisualizeServer(AnomalyDetectionServer):
         median_ratio = np.median(ratio_vals)
         mad = np.median(np.abs(ratio_vals - median_ratio))
 
-        k = self.scaled_norm_filter.get('k_mad', 6.0)
+        k = self.scaled_norm_filter.get('k_mad', 150.0)
         threshold = median_ratio + k * mad
         return {cid for cid, r in ratios.items() if r > threshold}
     
