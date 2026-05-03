@@ -12,3 +12,4 @@ from backfed.clients.sentiment_malicious_client import SentimentMaliciousClient
 from backfed.clients.reddit_malicious_client import RedditMaliciousClient
 from backfed.clients.anticipate_malicious_client import AnticipateClient
 from backfed.clients.adaptive_badnet_client import AdaptiveBadNetClient
+from backfed.clients.decorrelated_malicious_client import DecorrelatedBadNetClient

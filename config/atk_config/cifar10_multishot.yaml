@@ -155,6 +155,24 @@ model_poison_config:
     gradual_ramp_rounds: 10
     target_norm_scale: 0.5
 
+  decorrelated_low:
+    _target_: backfed.clients.DecorrelatedBadNetClient
+    decor_lambda: 0.5
+    random_scale: 0.05
+    keep_norm: true
+
+  decorrelated_high:
+    _target_: backfed.clients.DecorrelatedBadNetClient
+    decor_lambda: 1.0
+    random_scale: 0.05
+    keep_norm: true
+
+  decorrelated_noise_only:
+    _target_: backfed.clients.DecorrelatedBadNetClient
+    decor_lambda: 0.0
+    random_scale: 0.15
+    keep_norm: true
+
 ########################################################
 # *Attack optimizer configuration
 atk_optimizer_config:

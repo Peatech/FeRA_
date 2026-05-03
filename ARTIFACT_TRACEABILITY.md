@@ -96,7 +96,7 @@ python main.py --config-name cifar10 \
   aggregator=<DEFENCE> \
   atk_config=cifar10_multishot \
   atk_config.data_poison_method=pattern \
-  atk_config.model_poison_method=a3fl \
+  atk_config.model_poison_method=base \
   atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
   alpha=0.5 num_rounds=100 seed=<SEED> \
   checkpoint=path_to_checkpoint
@@ -122,7 +122,7 @@ python main.py --config-name cifar10 \
   aggregator=fera_visualize \
   atk_config=cifar10_multishot \
   atk_config.data_poison_method=badnets \
-  atk_config.model_poison_method=decorrelated \
+  atk_config.model_poison_method=decorrelated_low \
   atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
   alpha=0.5 num_rounds=100 seed=<SEED> \
   checkpoint=path_to_checkpoint
@@ -212,7 +212,7 @@ python main.py --config-name cifar10 \
   atk_config.model_poison_method=<base|neurotoxin> \
   atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
   aggregator_config.fera_visualize.scaled_norm_filter.enabled=<true|false> \
-  aggregator_config.fera_visualize.default_filter.enabled=<true|false> \
+  aggregator_config.fera_visualize.consistency_filter.enabled=<true|false> \
   alpha=0.5 num_rounds=100 seed=<SEED> \
   checkpoint=path_to_checkpoint
 ```
@@ -299,9 +299,9 @@ python main.py --config-name cifar10 \
   atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
   aggregator_config.fera_visualize.spectral_weight=<0.3|0.5|0.7|1.0> \
   aggregator_config.fera_visualize.delta_weight=<0.7|0.5|0.3|0.0> \
-  aggregator_config.fera_visualize.default_filter.combined_threshold=0.60 \
-  aggregator_config.fera_visualize.default_filter.tda_threshold=0.60 \
-  aggregator_config.fera_visualize.default_filter.mutual_sim_threshold=0.60 \
+  aggregator_config.fera_visualize.consistency_filter.combined_threshold=0.60 \
+  aggregator_config.fera_visualize.consistency_filter.das_threshold=0.60 \
+  aggregator_config.fera_visualize.consistency_filter.mutual_sim_threshold=0.60 \
   aggregator_config.fera_visualize.collusion_filter.enabled=false \
   aggregator_config.fera_visualize.outlier_filter.enabled=false \
   aggregator_config.fera_visualize.scaled_norm_filter.enabled=false \
@@ -318,9 +318,9 @@ python main.py --config-name cifar10 \
   atk_config.data_poison_method=pattern \
   atk_config.model_poison_method=neurotoxin \
   atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
-  aggregator_config.fera_visualize.default_filter.combined_threshold=<0.40|0.50|0.60> \
-  aggregator_config.fera_visualize.default_filter.tda_threshold=<0.40|0.50|0.60> \
-  aggregator_config.fera_visualize.default_filter.mutual_sim_threshold=<0.80|0.70|0.60> \
+  aggregator_config.fera_visualize.consistency_filter.combined_threshold=<0.40|0.50|0.60> \
+  aggregator_config.fera_visualize.consistency_filter.das_threshold=<0.40|0.50|0.60> \
+  aggregator_config.fera_visualize.consistency_filter.mutual_sim_threshold=<0.80|0.70|0.60> \
   alpha=0.5 num_rounds=100 seed=<SEED> \
   checkpoint=path_to_checkpoint
 ```
@@ -334,7 +334,7 @@ python main.py --config-name cifar10 \
   atk_config.data_poison_method=badnets \
   atk_config.model_poison_method=anticipate \
   atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
-  aggregator_config.fera_visualize.default_filter.enabled=false \
+  aggregator_config.fera_visualize.consistency_filter.enabled=false \
   aggregator_config.fera_visualize.collusion_filter.enabled=false \
   aggregator_config.fera_visualize.outlier_filter.enabled=false \
   aggregator_config.fera_visualize.scaled_norm_filter.enabled=true \
