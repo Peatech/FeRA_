@@ -175,7 +175,7 @@ python main.py --config-name <emnist|femnist> \
 python main.py --config-name <mnist|fmnist> \
   aggregator=<DEFENCE> \
   atk_config.data_poison_method=distributed \
-  atk_config.model_poison_method=dba \
+  atk_config.model_poison_method=base \
   atk_config.poison_start_round=5 atk_config.poison_end_round=100 \
   num_rounds=100 seed=<SEED>
 ```
@@ -257,7 +257,7 @@ python main.py --config-name cifar10 \
   atk_config.model_poison_method=base \
   atk_config.poison_start_round=1200 atk_config.poison_end_round=1450 \
   model=<resnet18|resnet34|vgg16> \
-  alpha=0.5 num_rounds=250 seed=<SEED>
+  alpha=0.5 num_rounds=250 seed=<SEED> checkpoint=null
 ```
 
 ## Representation Extraction Depth
