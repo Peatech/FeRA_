@@ -1,374 +1,412 @@
-# Artifact Traceability — FeRA (ACM CCS Artifact Evaluation)
+# Artifact Traceability — FeRA
 
-Every figure and table in the submitted paper is listed below with the exact
-`main.py` command (or Hydra config path) needed to reproduce it from this
-repository.
+Maps every figure and table in the paper to its reproduction command.
+All runs use `seed=42` and `training_mode=sequential` unless noted.
+Attack runs load a pretrained checkpoint and run for 100 poisoning rounds.
 
-**General conventions**
-
-- All experiments use `training_mode=sequential` unless the command shows `parallel`.
-- `checkpoint=null` starts training from scratch; supply a pretrained `.pth` for
-  continued-training experiments.
-- Results are logged to `outputs/<run_name>/.../*.csv`.
-- Substitute `num_gpus=0.25` / `num_cpus=4` for a single-GPU machine.
+**Checkpoint (CIFAR-10, ResNet-18, round 2000):**
+```
+checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
+```
 
 ---
 
-## Figures
+## Motivation Figures
 
-### Figure: `fig:variance_suppression`
-_Representation variance distribution (benign vs. backdoored clients)._
+### `fig:variance_suppression`, `fig:collusion_patterns`, `fig:topk_eigenvalues`, `fig:norm_inflation`, `fig:cka_attack`, `fig:pca_scatter`
+
+_Observation figures: representation variance, inter-client similarity, top-k eigenvalues, spectral-ratio amplification, CKA matrix, 2D PCA of deltas._
 
 ```bash
 python main.py --config-name cifar10 \
   aggregator=fera_visualize \
   aggregator_config.fera_visualize.log_ranked_metric_tables=true \
-  atk_config.model_poison_method=neurotoxin \
+  atk_config=cifar10_multishot \
   atk_config.data_poison_method=pattern \
-  num_rounds=100 seed=42 alpha=0.5
+  atk_config.model_poison_method=neurotoxin \
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
+  alpha=0.5 num_rounds=100 seed=42 \
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
 ```
-Variance metrics are written to `outputs/.../fera_visualize/all_rounds_metrics.csv`
-(columns `spectral_norm`, `trace`, `eigenvalue_1`…`eigenvalue_5`).
+
+Metrics written to `outputs/.../fera_visualize/all_rounds_metrics.csv`.
 
 ---
 
-### Figure: `fig:collusion_patterns`
-_Pairwise cosine similarity heatmap (3 malicious, 7 benign)._
+## Main Tables
 
-Same run as above; pairwise similarity values are in column `mutual_similarity`
-of `all_rounds_metrics.csv`.
-
----
-
-### Figure: `fig:topk_eigenvalues`
-_Top-k eigenvalue spectra (malicious vs. benign)._
-
-Same run; columns `eigenvalue_1` … `eigenvalue_5` per client per round.
-
----
-
-### Figure: `fig:norm_inflation`
-_Spectral-ratio amplification under scaling attacks._
+### `tab:iid_main` — IID CIFAR-10: 9 attacks × defences
 
 ```bash
 python main.py --config-name cifar10 \
-  aggregator=fera_visualize \
-  aggregator_config.fera_visualize.log_ranked_metric_tables=true \
-  atk_config.model_poison_method=anticipate \
-  atk_config.data_poison_method=pattern \
-  num_rounds=100 seed=42 alpha=0.5
-```
-Column `spectral_norm` (relative to per-round median) in `all_rounds_metrics.csv`.
-
----
-
-### Figure: `fig:cka_attack` and `fig:pca_scatter`
-_CKA similarity matrix / 2D PCA of representation deltas._
-
-These are illustrative observation figures produced by running any attack with
-`log_ranked_metric_tables=true` and extracting the representation tensors from
-`all_rounds_metrics.csv` using any PCA / CKA script.
-
----
-
-### Figure: `fig:a3fl_iid_performance`
-_BA under A3FL across Dirichlet α levels (CIFAR-10, CIFAR-100, TinyImageNet)._
-
-Produced from Table `tab:a3fl_cifar10` data (see below) and corresponding runs
-on CIFAR-100 / TinyImageNet with `--config-name cifar100` / `tinyimagenet`.
-
----
-
-### Figure: `fig:gtsrb`
-_GTSRB performance curves._
-
-```bash
-python main.py --config-name gtsrb \
-  aggregator=fera_visualize \
-  atk_config.model_poison_method=neurotoxin \
-  atk_config.data_poison_method=pattern \
-  num_rounds=100 seed=42 alpha=0.5
-```
-
----
-
-## Main-paper tables
-
-### Table `tab:iid_main`
-_IID CIFAR-10 — 9 attacks × 9 defences + no-defence._
-
-Each cell is one run; the command pattern is:
-
-```bash
-python main.py --config-name cifar10 \
-  aggregator=<DEFENSE> \
-  atk_config.model_poison_method=<ATTACK> \
+  aggregator=<DEFENCE> \
+  atk_config=cifar10_multishot \
   atk_config.data_poison_method=<TRIGGER> \
-  alpha=0.9 \
-  atk_config.poison_start_round=2001 atk_config.poison_end_round=2100 \
-  num_rounds=100 seed=42
+  atk_config.model_poison_method=<ATTACK> \
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
+  alpha=0.9 num_rounds=100 seed=42 \
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
 ```
 
-**Attacks** (`atk_config.model_poison_method`):  
-`base`, `neurotoxin`, `a3fl`, `anticipate`, `chameleon`, `dba`, `iba`  
-**Triggers** (`atk_config.data_poison_method`):  
-`badnets`, `pattern`, `pixel`, `blended`, `distributed`, `edge_case`, `iba`, `chameleon`, `centralized`  
-**Defences** (`aggregator`):  
-`unweighted_fedavg`, `fera_visualize`, `multi_krum`, `foolsgold`, `flame`,
-`fltrust`, `robustlr`, `deepsight`, `fldetector`
+`<DEFENCE>`: `fera_visualize`, `unweighted_fedavg`, `multi_krum`, `foolsgold`, `flame`, `fltrust`, `robustlr`, `deepsight`, `fldetector`  
+`<ATTACK>` / `<TRIGGER>`: `base/badnets`, `neurotoxin/pattern`, `a3fl/pattern`, `anticipate/pattern`, `chameleon/chameleon`, `dba/distributed`, `iba/iba`
 
 ---
 
-### Table `tab:other_datasets`
-_CIFAR-100 and Tiny-ImageNet under pixel-pattern attacks._
+### `tab:other_datasets` — CIFAR-100 and Tiny-ImageNet
 
 ```bash
 # CIFAR-100
 python main.py --config-name cifar100 \
-  aggregator=<DEFENSE> \
+  aggregator=<DEFENCE> \
+  atk_config=cifar100_multishot \
   atk_config.data_poison_method=pattern \
-  atk_config.poison_start_round=2001 atk_config.poison_end_round=2100 \
-  num_rounds=100 seed=42 alpha=0.5
-
-# TinyImageNet
-python main.py --config-name tinyimagenet \
-  aggregator=<DEFENSE> \
-  atk_config.data_poison_method=pattern \
-  atk_config.poison_start_round=2001 atk_config.poison_end_round=2100 \
-  num_rounds=100 seed=42 alpha=0.5
-```
-
----
-
-### Table `tab:non_iid`
-_Non-IID severity — Neurotoxin on CIFAR-10, α ∈ {0.5, 0.3, 0.1}._
-
-```bash
-python main.py --config-name cifar10 \
-  aggregator=<DEFENSE> \
   atk_config.model_poison_method=neurotoxin \
+  atk_config.poison_start_round=1001 atk_config.poison_end_round=1101 \
+  alpha=0.5 num_rounds=100 seed=42 \
+  checkpoint=checkpoints/CIFAR100_unweighted_fedavg/resnet18_round_1000_dir_0.4.pth
+
+# Tiny-ImageNet
+python main.py --config-name tinyimagenet \
+  aggregator=<DEFENCE> \
+  atk_config=tinyimagenet_multishot \
   atk_config.data_poison_method=pattern \
-  atk_config.poison_start_round=2001 atk_config.poison_end_round=2100 \
-  num_rounds=100 seed=42 \
-  alpha=<0.5|0.3|0.1>
+  atk_config.model_poison_method=neurotoxin \
+  atk_config.poison_start_round=501 atk_config.poison_end_round=601 \
+  alpha=0.5 num_rounds=100 seed=42 \
+  checkpoint=checkpoints/TINYIMAGENET_unweighted_fedavg/resnet18_round_500_dir_0.4.pth
 ```
 
 ---
 
-### Table `tab:iid_sensitivity`
-_FeRA across 7 attacks × Dirichlet α values on CIFAR-10._
-
-Same pattern as `tab:iid_main` with `aggregator=fera_visualize` only, sweeping
-`alpha` over `{0.9, 0.7, 0.5, 0.3, 0.1}`.
-
----
-hyyu
-### Table `tab:cross_device`
-_Cross-silo FL (10 clients, all participate)._
+### `tab:non_iid` — Non-IID severity (Neurotoxin, CIFAR-10)
 
 ```bash
 python main.py --config-name cifar10 \
-  aggregator=<DEFENSE> \
-  num_clients=10 \
-  num_clients_per_round=10 \
+  aggregator=<DEFENCE> \
+  atk_config=cifar10_multishot \
   atk_config.data_poison_method=pattern \
-  alpha=<0.9|0.5> \
-  atk_config.poison_start_round=2001 atk_config.poison_end_round=2100 \
-  num_rounds=100 seed=42
+  atk_config.model_poison_method=neurotoxin \
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
+  alpha=<0.5|0.3|0.1> num_rounds=100 seed=42 \
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
 ```
 
 ---
 
-### Table `tab:a3fl_cifar10`
-_A3FL attack on CIFAR-10._
+### `tab:iid_sensitivity` — FeRA across α values and 7 attacks
 
 ```bash
 python main.py --config-name cifar10 \
-  aggregator=<DEFENSE> \
+  aggregator=fera_visualize \
+  atk_config=cifar10_multishot \
+  atk_config.data_poison_method=<TRIGGER> \
+  atk_config.model_poison_method=<ATTACK> \
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
+  alpha=<0.1|0.2|0.5|0.7|0.9> num_rounds=100 seed=42 \
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
+```
+
+---
+
+### `tab:cross_device` — Cross-silo FL (10 clients, all participate)
+
+```bash
+python main.py --config-name cifar10 \
+  aggregator=<DEFENCE> \
+  atk_config=cifar10_multishot \
+  atk_config.data_poison_method=pattern \
+  atk_config.model_poison_method=neurotoxin \
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
+  num_clients=10 num_clients_per_round=10 \
+  alpha=<0.9|0.5> num_rounds=100 seed=42 \
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
+```
+
+---
+
+### `tab:a3fl_cifar10` — A3FL on CIFAR-10
+
+```bash
+python main.py --config-name cifar10 \
+  aggregator=<DEFENCE> \
+  atk_config=cifar10_multishot \
+  atk_config.data_poison_method=pattern \
   atk_config.model_poison_method=a3fl \
-  atk_config.data_poison_method=pattern \
-  alpha=0.5 \
-  atk_config.poison_start_round=2001 atk_config.poison_end_round=2100 \
-  num_rounds=100 seed=42
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
+  alpha=0.5 num_rounds=100 seed=42 \
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
 ```
+
+### `fig:a3fl_iid_performance` — A3FL across datasets and α values
+
+Same command with `alpha=<0.1|0.2|0.5|0.7|0.9>`, repeated for `--config-name cifar100` and `tinyimagenet`.
 
 ---
 
-### Table `tab:adaptive_attacks`
-_Adaptive BadNet attack (`adaptive_badnet` client)._
+### `tab:adaptive_attacks` — Adaptive BadNet
 
 ```bash
 python main.py --config-name cifar10 \
   aggregator=fera_visualize \
+  atk_config=cifar10_multishot \
+  atk_config.data_poison_method=badnets \
   atk_config.model_poison_method=adaptive_badnet \
-  atk_config.data_poison_method=badnets \
-  alpha=0.5 \
-  atk_config.poison_start_round=2001 atk_config.poison_end_round=2100 \
-  num_rounds=100 seed=42
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
+  alpha=0.5 num_rounds=100 seed=42 \
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
 ```
-Client implementation: `backfed/clients/adaptive_badnet_client.py`
 
 ---
 
-### Table `tab:decorr_attack`
-_Decorrelated backdoor attack._
+### `tab:decorr_attack` — Decorrelated backdoor
 
 ```bash
 python main.py --config-name cifar10 \
   aggregator=fera_visualize \
-  atk_config.model_poison_method=decorrelated \
+  atk_config=cifar10_multishot \
   atk_config.data_poison_method=badnets \
-  alpha=0.5 \
-  atk_config.poison_start_round=2001 atk_config.poison_end_round=2100 \
-  num_rounds=100 seed=42
+  atk_config.model_poison_method=decorrelated \
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
+  alpha=0.5 num_rounds=100 seed=42 \
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
 ```
-Client implementation: `backfed/clients/decorrelated_malicious_client.py`
 
 ---
 
-## Appendix / ablation tables
+### `tab:no_attack_convergence` — No-attack FPR and convergence gap
 
-### Table `tab:ablation`
-_Detection mechanism contributions (filter components on/off)._
+```bash
+# FeRA — no attack
+python main.py --config-name cifar10 \
+  aggregator=fera_visualize \
+  no_attack=True \
+  alpha=<1.0|0.5|0.2> num_rounds=100 seed=42
+
+# FedAvg baseline
+python main.py --config-name cifar10 \
+  aggregator=unweighted_fedavg \
+  no_attack=True \
+  alpha=<1.0|0.5|0.2> num_rounds=100 seed=42
+```
+
+---
+
+### `tab:poison_percentage` — Varying malicious client fraction
+
+```bash
+python main.py --config-name cifar10 \
+  aggregator=fera_visualize \
+  atk_config=cifar10_multishot \
+  atk_config.data_poison_method=badnets \
+  atk_config.model_poison_method=base \
+  atk_config.fraction_adversaries=<0.1|0.2|0.3> \
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
+  alpha=0.5 num_rounds=100 seed=42 \
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
+```
+
+---
+
+### `tab:more_datasets` / `fig:gtsrb` — GTSRB
+
+```bash
+python main.py --config-name gtsrb \
+  aggregator=<DEFENCE> \
+  atk_config=gtsrb_multishot \
+  atk_config.data_poison_method=pattern \
+  atk_config.model_poison_method=neurotoxin \
+  alpha=0.5 num_rounds=100 seed=42
+```
+
+### `tab:mnist_family_shallow` / `tab:mnist_defended` — EMNIST / FEMNIST / MNIST
+
+```bash
+python main.py --config-name <mnist|emnist|femnist> \
+  aggregator=<DEFENCE> \
+  atk_config.data_poison_method=pattern \
+  atk_config.model_poison_method=<ATTACK> \
+  num_rounds=100 seed=42
+```
+
+---
+
+## Ablation Tables
+
+### `tab:ablation` — Filter component contributions
 
 ```bash
 # All filters on (default)
 python main.py --config-name cifar10 \
   aggregator=fera_visualize \
-  atk_config.model_poison_method=<base|neurotoxin> \
+  atk_config=cifar10_multishot \
   atk_config.data_poison_method=<badnets|pattern> \
-  alpha=0.5 num_rounds=100 seed=42
+  atk_config.model_poison_method=<base|neurotoxin> \
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
+  alpha=0.5 num_rounds=100 seed=42 \
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
 
-# Consistency filter only (disable norm-inflation)
+# Consistency filter only
   aggregator_config.fera_visualize.scaled_norm_filter.enabled=false
 
-# Norm-inflation filter only (disable consistency)
+# Norm-Inflation filter only
   aggregator_config.fera_visualize.default_filter.enabled=false
 ```
 
 ---
 
-### Table `tab:root_size`
-_Root dataset size sensitivity (in-distribution)._
+### `tab:root_size` — Root dataset size (in-distribution)
 
 ```bash
 python main.py --config-name cifar10 \
   aggregator=fera_visualize \
-  atk_config.model_poison_method=neurotoxin \
+  atk_config=cifar10_multishot \
   atk_config.data_poison_method=pattern \
+  atk_config.model_poison_method=neurotoxin \
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
+  aggregator_config.fera_visualize.root_size=<16|32|64|128|256> \
   alpha=0.5 num_rounds=100 seed=42 \
-  aggregator_config.fera_visualize.root_size=<16|32|64|128|256>
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
 ```
 
 ---
 
-### Table `tab:root_size_ood`
-_Root dataset size sensitivity (OOD: CIFAR-100 as root)._
+### `tab:root_size_ood` — Root dataset size (OOD: CIFAR-100 as root)
 
 ```bash
 python main.py --config-name cifar10 \
   aggregator=fera_visualize \
-  atk_config.model_poison_method=neurotoxin \
+  atk_config=cifar10_multishot \
   atk_config.data_poison_method=pattern \
-  alpha=0.5 num_rounds=100 seed=42 \
+  atk_config.model_poison_method=neurotoxin \
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
   aggregator_config.fera_visualize.use_ood_root_dataset=true \
   aggregator_config.fera_visualize.ood_root_dataset_name=CIFAR100 \
-  aggregator_config.fera_visualize.root_size=<16|32|64|128|256>
+  aggregator_config.fera_visualize.root_size=<16|32|64|128|256> \
+  alpha=0.5 num_rounds=100 seed=42 \
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
 ```
 
 ---
 
-### Table `tab:architectures`
-_Architecture comparison (ResNet-18, ResNet-34, VGG-16, etc.)._
+### `tab:architectures` — Model architecture comparison
 
 ```bash
 python main.py --config-name cifar10 \
   aggregator=fera_visualize \
+  atk_config=cifar10_multishot \
   atk_config.data_poison_method=pattern \
-  alpha=0.5 seed=42 \
-  model=<ResNet18|ResNet34|VGG16> \
+  atk_config.model_poison_method=neurotoxin \
   atk_config.poison_start_round=1200 atk_config.poison_end_round=1450 \
-  num_rounds=250
+  model=<resnet18|resnet34|vgg16> \
+  alpha=0.5 num_rounds=250 seed=42
 ```
 
 ---
 
-### Table `tab:layer_selection`
-_Representation extraction depth (penultimate vs. layer2/3/4)._
+### `tab:layer_selection` — Representation extraction depth
 
 ```bash
 python main.py --config-name cifar10 \
   aggregator=fera_visualize \
-  atk_config.model_poison_method=neurotoxin \
+  atk_config=cifar10_multishot \
   atk_config.data_poison_method=pattern \
+  atk_config.model_poison_method=neurotoxin \
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
+  aggregator_config.fera_visualize.extraction_layer=<penultimate|layer4|layer3|layer2> \
   alpha=0.5 num_rounds=100 seed=42 \
-  aggregator_config.fera_visualize.extraction_layer=<penultimate|layer4|layer3|layer2>
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
 ```
 
 ---
 
-### Table `tab:feature_dimension`
-_Feature dimension impact._
-
-Controlled via architecture (feature dim is set by the model);
-`aggregator_config.fera_visualize.feature_dim` overrides the auto-detected value.
-
----
-
-### Table `tab:weight_ablation`
-_Combined score weight (spectral vs. delta)._
+### `tab:feature_dimension` — Feature dimension sensitivity
 
 ```bash
 python main.py --config-name cifar10 \
   aggregator=fera_visualize \
+  atk_config=cifar10_multishot \
+  atk_config.data_poison_method=pattern \
   atk_config.model_poison_method=neurotoxin \
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
+  aggregator_config.fera_visualize.feature_dim=<64|128|256|512> \
   alpha=0.5 num_rounds=100 seed=42 \
-  aggregator_config.fera_visualize.spectral_weight=<0.3|0.5|0.6|0.7|1.0> \
-  aggregator_config.fera_visualize.delta_weight=<0.7|0.5|0.4|0.3|0.0>
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
 ```
 
 ---
 
-### Table `tab:consistency_ablation`
-_Threshold sensitivity (Combined / DAS / MutualSim)._
+### `tab:weight_ablation` — DAS spectral vs. delta weight
 
 ```bash
 python main.py --config-name cifar10 \
   aggregator=fera_visualize \
+  atk_config=cifar10_multishot \
+  atk_config.data_poison_method=pattern \
   atk_config.model_poison_method=neurotoxin \
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
+  aggregator_config.fera_visualize.spectral_weight=<0.3|0.5|0.7|1.0> \
+  aggregator_config.fera_visualize.delta_weight=<0.7|0.5|0.3|0.0> \
+  aggregator_config.fera_visualize.default_filter.combined_threshold=0.60 \
+  aggregator_config.fera_visualize.default_filter.tda_threshold=0.60 \
+  aggregator_config.fera_visualize.default_filter.mutual_sim_threshold=0.60 \
   alpha=0.5 num_rounds=100 seed=42 \
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
+```
+
+---
+
+### `tab:consistency_ablation` — Consistency filter threshold sensitivity
+
+```bash
+python main.py --config-name cifar10 \
+  aggregator=fera_visualize \
+  atk_config=cifar10_multishot \
+  atk_config.data_poison_method=pattern \
+  atk_config.model_poison_method=neurotoxin \
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
   aggregator_config.fera_visualize.default_filter.combined_threshold=<0.40|0.50|0.60> \
   aggregator_config.fera_visualize.default_filter.tda_threshold=<0.40|0.50|0.60> \
-  aggregator_config.fera_visualize.default_filter.mutual_sim_threshold=<0.60|0.70|0.80>
+  aggregator_config.fera_visualize.default_filter.mutual_sim_threshold=<0.50|0.60|0.70> \
+  alpha=0.5 num_rounds=100 seed=42 \
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
 ```
-Default paper values: **Combined ≤ 50%, DAS ≤ 50%, MutualSim ≥ 60%**.
 
 ---
 
-### Table `tab:fera-norm-ablation`
-_MAD sensitivity parameter k for norm-inflation filter._
+### `tab:fera-norm-ablation` — Norm-Inflation filter MAD threshold
 
 ```bash
 python main.py --config-name cifar10 \
   aggregator=fera_visualize \
+  atk_config=cifar10_multishot \
+  atk_config.data_poison_method=badnets \
   atk_config.model_poison_method=anticipate \
-  alpha=0.5 num_rounds=100 seed=42 \
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
+  aggregator_config.fera_visualize.default_filter.enabled=false \
+  aggregator_config.fera_visualize.collusion_filter.enabled=false \
+  aggregator_config.fera_visualize.outlier_filter.enabled=false \
   aggregator_config.fera_visualize.scaled_norm_filter.enabled=true \
-  aggregator_config.fera_visualize.scaled_norm_filter.spectral_ratio_threshold=<50|100|200|500>
+  aggregator_config.fera_visualize.scaled_norm_filter.spectral_ratio_threshold=<50|100|200|500> \
+  alpha=0.5 num_rounds=100 seed=42 \
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
 ```
 
 ---
 
-### Table `tab:bsp_vs_discard`
-_BSP vs. discard aggregation comparison._
+### `tab:bsp_vs_discard` — BSP vs. discard aggregation
 
 ```bash
-# BSP (Benign Subspace Projection)
+# BSP (Benign Subspace Projection) — paper default
 python main.py --config-name cifar10 \
   aggregator=fera_visualize \
   aggregator_config.fera_visualize.flagged_client_treatment=project \
+  atk_config=cifar10_multishot \
+  atk_config.data_poison_method=pattern \
   atk_config.model_poison_method=neurotoxin \
-  alpha=0.5 num_rounds=100 seed=42
+  atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
+  alpha=0.5 num_rounds=100 seed=42 \
+  checkpoint=checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth
 
 # Discard
   aggregator_config.fera_visualize.flagged_client_treatment=discard
@@ -376,102 +414,13 @@ python main.py --config-name cifar10 \
 
 ---
 
-### Table `tab:no_attack_convergence`
-_FeRA under zero-attack conditions (FPR and MA gap vs. FedAvg)._
-
-```bash
-# FeRA — no attack, IID (α=1.0)
-python main.py --config-name cifar10 \
-  aggregator=fera_visualize \
-  no_attack=True \
-  num_rounds=100 seed=42 alpha=1.0 \
-  atk_config.poison_start_round=2001 atk_config.poison_end_round=2100
-
-# Repeat for alpha=0.5 and alpha=0.2
-# FedAvg baseline (replace aggregator=unweighted_fedavg)
-```
-Convenience Slurm script: `slurm_noattack_cifar10_dirichlet.sbatch`
-(set `RUN_ALL_ALPHAS=1` to run all three Dirichlet settings in one job).
-
-**Empirically measured FPR (this artifact, rounds 2001–2100):**
-
-| Setting | Mean FPR_clean |
-|---------|---------------|
-| IID (α = 1.0) | 0.0576 |
-| Non-IID (α = 0.5) | 0.0616 |
-| Non-IID (α = 0.2) | 0.0879 |
-
----
-
-### Table `tab:mnist_family_shallow`
-_EMNIST and FEMNIST using MnistNet._
-
-```bash
-python main.py --config-name emnist \
-  aggregator=fera_visualize \
-  atk_config.model_poison_method=<ATTACK> \
-  num_rounds=100 seed=42
-
-python main.py --config-name femnist \
-  aggregator=fera_visualize \
-  atk_config.model_poison_method=<ATTACK> \
-  num_rounds=100 seed=42
-```
-
----
-
-### Table `tab:more_datasets`
-_Additional dataset results (e.g. GTSRB)._
-
-```bash
-python main.py --config-name gtsrb \
-  aggregator=<DEFENSE> \
-  atk_config.model_poison_method=<ATTACK> \
-  num_rounds=100 seed=42 alpha=0.5
-```
-
----
-
-### Table `tab:mnist_defended`
-_MNIST defended variants._
-
-```bash
-python main.py --config-name mnist \
-  aggregator=fera_visualize \
-  atk_config.model_poison_method=<ATTACK> \
-  num_rounds=100 seed=42
-```
-
----
-
-### Table `tab:poison_percentage`
-_Varying poison percentage / malicious client fraction._
-
-```bash
-python main.py --config-name cifar10 \
-  aggregator=fera_visualize \
-  atk_config.model_poison_method=neurotoxin \
-  alpha=0.5 num_rounds=100 seed=42 \
-  atk_config.malicious_rate=<0.05|0.10|0.20|0.30>
-```
-
----
-
-## Key source files
+## Key Source Files
 
 | File | Role |
 |------|------|
-| `main.py` | Experiment entry point (Hydra). |
-| `config/base.yaml` | All FeRA hyperparameter defaults. |
-| `config/cifar10.yaml` | CIFAR-10 dataset / model defaults. |
-| `backfed/servers/fera_visualize_server.py` | FeRA detection + aggregation logic. |
-| `backfed/servers/defense_categories.py` | FPR / detection metric computation. |
-| `backfed/clients/adaptive_badnet_client.py` | Adaptive BadNet (Table `tab:adaptive_attacks`). |
-| `backfed/clients/decorrelated_malicious_client.py` | Decorrelated attack (Table `tab:decorr_attack`). |
-| `backfed/servers/fera_attention_server.py` | Attention-based FeRA variant. |
-
----
-
-*This file was generated to satisfy ACM CCS artifact evaluation requirements.*
-*Every result in the submitted paper can be reproduced using the commands above*
-*without modifying any source file.*
+| `main.py` | Experiment entry point (Hydra) |
+| `config/base.yaml` | FeRA hyperparameter defaults |
+| `backfed/servers/fera_visualize_server.py` | FeRA detection and aggregation |
+| `backfed/servers/defense_categories.py` | FPR / detection metrics |
+| `backfed/clients/adaptive_badnet_client.py` | Adaptive BadNet (`tab:adaptive_attacks`) |
+| `backfed/clients/decorrelated_malicious_client.py` | Decorrelated attack (`tab:decorr_attack`) |
