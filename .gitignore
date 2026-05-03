@@ -82,9 +82,6 @@ data/ARDIS
 slurm-*.out
 *.sbatch
 
-# Handoff / internal documents
-LLM_VERIFICATION_HANDOFF.md
-
 # data_splits are intentionally tracked; allow pkl in that folder
 !data_splits/
 !data_splits/*.pkl
