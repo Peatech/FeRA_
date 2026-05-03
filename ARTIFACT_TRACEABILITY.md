@@ -25,17 +25,6 @@ python main.py --config-name cifar10 \
   checkpoint=path_to_checkpoint
 ```
 
-| Attack | `model_poison_method` | `data_poison_method` |
-|--------|-----------------------|----------------------|
-| BadNet | `base` | `badnets` |
-| Blended | `base` | `blended` |
-| Edge-case | `base` | `edge_case` |
-| IBA | `iba` | `iba` |
-| Neurotoxin | `neurotoxin` | `pattern` |
-| Chameleon | `chameleon` | `chameleon` |
-
-`<DEFENCE>`: `unweighted_fedavg`, `fera_visualize`, `multi_krum`, `foolsgold`, `flame`, `fltrust`, `robustlr`, `deepsight`
-
 ## Performance on CIFAR-100 and Tiny-ImageNet
 
 ```bash
