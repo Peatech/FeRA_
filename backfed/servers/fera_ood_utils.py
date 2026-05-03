@@ -4,7 +4,6 @@ from typing import Optional
 from logging import INFO
 from backfed.utils.system_utils import log
 
-
 def create_root_dataset_loader(
     testset,
     root_size: int,
@@ -30,7 +29,6 @@ def create_root_dataset_loader(
         pin_memory=True if device and device.type == "cuda" else False,
     )
     return root_loader
-
 
 def load_ood_dataset(base_dataset: str, config) -> Optional[torch.utils.data.Dataset]:
     from torchvision import datasets, transforms

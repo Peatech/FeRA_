@@ -1,6 +1,6 @@
 # FeRA (artifact)
 
-Federated learning simulator with the FeRA defense (`fera_visualize` server), standard baselines (FedAvg, Multi-Krum, FoolsGold, FLAME, FLTrust, RobustLR, DeepSight, FLDetector, FLARE, RFLBAT, trimmed / coordinate median, WeakDP, LocalDP, FedProx), and common backdoor attacks.
+Federated learning framework with the FeRA defense (`fera_visualize` server), standard baselines (FedAvg, Multi-Krum, FoolsGold, FLAME, FLTrust, RobustLR, DeepSight, FLDetector, FLARE, RFLBAT, trimmed / coordinate median, WeakDP, LocalDP, FedProx), and common backdoor attacks.
 
 ## Requirements
 
@@ -56,7 +56,7 @@ Hydra overrides use the `aggregator_config.fera_visualize` block in `config/base
 | `aggregator_config.fera_visualize.flagged_client_treatment=discard` | Exclude flagged updates |
 | `aggregator_config.fera_visualize.default_filter.combined_threshold=0.50` | Percentile threshold on combined score |
 | `aggregator_config.fera_visualize.default_filter.tda_threshold=0.50` | Percentile threshold on TDA |
-| `aggregator_config.fera_visualize.default_filter.mutual_sim_threshold=0.70` | Mutual-similarity threshold |
+| `aggregator_config.fera_visualize.default_filter.mutual_sim_threshold=0.60` | Mutual-similarity threshold |
 | `aggregator_config.fera_visualize.scaled_norm_filter.enabled=true` | Enable norm-inflation filter |
 
 Example:
@@ -81,16 +81,7 @@ python main.py --config-name cifar10 aggregator=flame checkpoint=null num_rounds
 
 Hydra writes under `outputs/` (see `config/base.yaml` `hydra.run.dir`). Per-run FeRA metrics CSVs are under `outputs/.../fera_visualize/all_rounds_metrics.csv` when using `fera_visualize`.
 
-## Publish this copy to GitHub
+## Artifact traceability (ACM CCS)
 
-```bash
-cd /path/to/FeRA-public
-git init
-git add .
-git commit -m "Initial artifact release"
-git branch -M main
-git remote add origin <YOUR_ANONYMOUS_REPO_URL>
-git push -u origin main
-```
-
-The original full development tree is unchanged outside this directory.
+[`ARTIFACT_TRACEABILITY.md`](ARTIFACT_TRACEABILITY.md) maps every figure and
+table in the submitted paper to the exact `main.py` command that reproduces it.

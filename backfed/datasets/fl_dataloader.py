@@ -319,6 +319,9 @@ class FL_DataLoader:
         Args:
             cache_file_path (str): Path to save the cached data split
         """
+        # Pin the numpy state so the Dirichlet draw is the same regardless of
+        # what random operations (e.g. malicious-client selection) ran before.
+        np.random.seed(self.config.seed)
         sample_indices = list(range(len(self.trainset)))
         sample_cids = list(range(self.config.num_clients))
 

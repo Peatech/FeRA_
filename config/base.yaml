@@ -218,10 +218,7 @@ aggregator_config:
     eta: 0.5
 
   fera_visualize:
-    # MULTI-COMPONENT FILTERING DEFENSE
-    # Computes 5 per-client metrics and applies configurable filters
-    # Supports 4 independently configurable filter components
-    # Supports two filter variants: v1 (original) and v2 (simplified)
+
     _target_: backfed.servers.FeraVisualizeServer
     eta: 0.5
     
@@ -268,18 +265,16 @@ aggregator_config:
     spectral_weight: 0.6  # Weight for spectral norm in combined score
     delta_weight: 0.4  # Weight for delta norm in combined score
     
-    # Filter Component 1: Default Detection (always enabled)
-    default_filter:
+    consistency_filter:
       enabled: true
-      combined_threshold: 0.50    # Bottom 50%
-      tda_threshold: 0.50         # Bottom 50% (UPDATED from 40%)
-      mutual_sim_threshold: 0.70  # Top 30% (≥70%)
+      combined_threshold: 0.50
+      das_threshold: 0.50
+      mutual_sim_threshold: 0.70
     
-    # Filter Component 2: Collusion Attackers Filter
     collusion_filter:
       enabled: false
-      mutual_sim_top_percent: 0.40  # Top 40% mutual similarity
-      tda_top_percent: 0.40         # Top 40% TDA
+      mutual_sim_top_percent: 0.40
+      das_top_percent: 0.40
     
     # Filter Component 3: Outlier Filter
     outlier_filter:
@@ -291,20 +286,7 @@ aggregator_config:
       enabled: false
       spectral_ratio_threshold: 100.0  # Flag if ratio > threshold
 
-    # ── Variant 3: Principled Efficient + Collusion-Robust Defense ───────
-    # filter_variant: v3  to activate
-    #
-    # Three principled improvements over V1 — NO oracle knowledge:
-    #   Q2 (scalability):
-    #     - Repr-space mutual similarity: reuses already-computed feature deltas
-    #       (n×D_rep ≈ 32K) vs full parameters (~11M for ResNet-18) → ~330× cheaper
-    #     - Dual-form spectral: n×n Gram (n=64) vs D×D covariance (D=512) → ~64×
-    #   Q3 (thresholds): SAME percentile thresholds as V1 (50/50/70).  Percentile
-    #     rank is data-driven per round — inherently adapts to distribution without
-    #     oracle knowledge.
-    #   Q4 (collusion): residual collusion filter detects Chameleon-style attacks
-    #     using only the update vectors provided to the server each round.
-    #
+
     # Residual collusion filter:
     v3_residual_sim_thresh: 0.70  # Residual cosine sim threshold
     v3_min_colluders: 2           # Min group size to trigger collusion flag

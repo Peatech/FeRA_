@@ -1,71 +1,22 @@
 """
-Adaptive BadNet Attack - Evasion-Aware Backdoor Client
+Adaptive BadNet attack with norm clipping and direction-alignment evasion.
 
-This attack extends the classic BadNets backdoor attack with evasion techniques
-designed to bypass norm-based and alignment-based defenses like FeRA.
+Extends MaliciousClient with post-training update manipulation to reduce
+detectability by norm-based and representation-alignment defenses.
 
-DEFENSE AWARENESS:
-- Knows: Defense monitors update norms (spectral/delta) and directional alignment (TDA/mutual similarity)
-- Doesn't know: Exact thresholds, filtering logic, or multi-metric combinations
+Evasion pipeline (applied after standard backdoor training):
+  1. Compute update delta = client_params − global_params.
+  2. Apply gradual ramping: scale delta by min(1, round / gradual_ramp_rounds).
+  3. Clip delta norm to target_norm_scale × estimated benign norm.
+  4. Blend delta direction with global model direction (alignment_weight controls
+     the fraction blended toward the global direction).
+  5. Reconstruct and return the modified state dict.
 
-EVASION TECHNIQUES:
-1. Norm Clipping: Limits update magnitude to appear within benign range
-2. Direction Alignment: Blends update direction toward global model to increase TDA score
-3. Gradual Ramping: Starts subtle, increases attack strength over rounds
-4. Adaptive Scaling: Dynamically adjusts update scale based on historical norms
-
-HOW IT WORKS:
-The attack operates in two phases:
-1. Standard backdoor training (inherited from MaliciousClient)
-2. Post-processing to make the malicious update appear benign:
-   - Computes update delta (client_params - global_params)
-   - Clips norm to target percentile of expected benign norms
-   - Blends direction with global model direction (increases alignment)
-   - Applies gradual ramping factor (weaker early, stronger later)
-
-CONFIGURATION PARAMETERS:
-- norm_clip_percentile (float): Target percentile for norm clipping (default: 75)
-  Higher values = more aggressive updates (easier to detect)
-  Lower values = more conservative updates (harder to detect, weaker attack)
-  
-- alignment_weight (float): Weight for direction alignment [0-1] (default: 0.3)
-  0.0 = no alignment (pure malicious direction)
-  1.0 = full alignment (towards global model, weak attack)
-  0.3 = 30% blend with global direction (balanced evasion)
-  
-- gradual_ramp_rounds (int): Rounds to reach full attack strength (default: 10)
-  Attack strength = min(1.0, current_round / gradual_ramp_rounds)
-  Early rounds use reduced strength to avoid detection
-  
-- target_norm_scale (float): Base norm scale for clipping (default: 0.5)
-  Multiplied by estimated benign norm to get clip threshold
-  Lower values = more conservative clipping
-
-USAGE:
-In your config file:
-```yaml
-attack:
-  _target_: backfed.clients.adaptive_badnet_client.AdaptiveBadNetClient
-  norm_clip_percentile: 75
-  alignment_weight: 0.3
-  gradual_ramp_rounds: 10
-  target_norm_scale: 0.5
-```
-
-Or via command line:
-```bash
-python main.py attack=adaptive_badnet defense=fera_visualize \
-    attack.norm_clip_percentile=75 attack.alignment_weight=0.3
-```
-
-LIMITATIONS:
-- Assumes defense uses norm-based and alignment-based metrics
-- Does not know exact detection thresholds
-- Cannot evade defenses that use fundamentally different approaches (e.g., certified defenses)
-- Trade-off: stronger evasion → weaker backdoor effectiveness
-
-Author: AI Assistant
-Date: 2025-11-09
+Configuration (via atk_config or Hydra override):
+  norm_clip_percentile  – percentile of past delta norms used as clip target (default: 75)
+  alignment_weight      – fraction of direction blended toward global model (default: 0.3)
+  gradual_ramp_rounds   – rounds to ramp from zero to full strength (default: 10)
+  target_norm_scale     – multiplier applied to the clip-target norm (default: 0.5)
 """
 
 import torch
@@ -133,43 +84,21 @@ class AdaptiveBadNetClient(MaliciousClient):
             verbose=verbose,
             **kwargs
         )
-        
-                            
+
         self.norm_clip_percentile = norm_clip_percentile
         self.alignment_weight = alignment_weight
         self.gradual_ramp_rounds = gradual_ramp_rounds
         self.target_norm_scale = target_norm_scale
-        
-                                                        
         self.norm_history = []
-        
-        log(INFO, f"Client [{self.client_id}] Initialized Adaptive BadNet Attack")
-        log(INFO, f"  Norm clip percentile: {self.norm_clip_percentile}")
-        log(INFO, f"  Alignment weight: {self.alignment_weight}")
-        log(INFO, f"  Gradual ramp rounds: {self.gradual_ramp_rounds}")
-        log(INFO, f"  Target norm scale: {self.target_norm_scale}")
     
     def train(self, train_package: Dict[str, Any]) -> Tuple[int, Dict[str, torch.Tensor], Metrics]:
-        """
-        Train with backdoor and apply evasion techniques.
-        
-        Args:
-            train_package: Training package with global model params and metadata
-            
-        Returns:
-            Tuple of (num_examples, evaded_state_dict, training_metrics)
-        """
-                                    
         num_examples, state_dict, metrics = super().train(train_package)
-        
-                                                
         server_round = train_package.get("server_round", 0)
         evaded_state_dict = self._apply_evasion(
             state_dict=state_dict,
             global_params=train_package["global_model_params"],
             server_round=server_round
         )
-        
         return num_examples, evaded_state_dict, metrics
     
     def _apply_evasion(
@@ -178,54 +107,18 @@ class AdaptiveBadNetClient(MaliciousClient):
         global_params: Dict[str, torch.Tensor],
         server_round: int
     ) -> Dict[str, torch.Tensor]:
-        """
-        Apply evasion techniques to make malicious update appear benign.
-        
-        Process:
-        1. Compute update delta (malicious_params - global_params)
-        2. Apply gradual ramping (reduce strength in early rounds)
-        3. Clip norm to appear within benign range
-        4. Align direction with global model
-        5. Reconstruct final parameters
-        
-        Args:
-            state_dict: Malicious client parameters
-            global_params: Global model parameters
-            server_round: Current training round
-            
-        Returns:
-            Evaded state dictionary
-        """
-                                 
         delta = self._compute_delta(state_dict, global_params)
-        
-                                                                    
         ramp_factor = min(1.0, server_round / max(1, self.gradual_ramp_rounds))
         delta_ramped = delta * ramp_factor
-        
-                                                  
         delta_clipped = self._clip_norm(delta_ramped, server_round)
-        
-                                                                   
-        delta_aligned = self._align_direction(
-            delta_clipped,
-            global_params,
-            weight=self.alignment_weight
-        )
-        
-                                         
+        delta_aligned = self._align_direction(delta_clipped, global_params, weight=self.alignment_weight)
         evaded_state_dict = self._apply_delta(global_params, delta_aligned)
-        
-                                
-        original_norm = torch.linalg.norm(delta).item()
-        final_norm = torch.linalg.norm(delta_aligned).item()
-        
+
         if self.verbose:
-            log(INFO, f"Client [{self.client_id}] Round {server_round} Evasion:")
-            log(INFO, f"  Ramp factor: {ramp_factor:.3f}")
-            log(INFO, f"  Original norm: {original_norm:.6f}")
-            log(INFO, f"  Final norm: {final_norm:.6f} (reduction: {(1 - final_norm/max(original_norm, 1e-9))*100:.1f}%)")
-        
+            original_norm = torch.linalg.norm(delta).item()
+            final_norm = torch.linalg.norm(delta_aligned).item()
+            log(INFO, f"Client [{self.client_id}] Round {server_round} evasion: "
+                      f"ramp={ramp_factor:.2f}, norm {original_norm:.4f}→{final_norm:.4f}")
         return evaded_state_dict
     
     def _compute_delta(
@@ -233,16 +126,6 @@ class AdaptiveBadNetClient(MaliciousClient):
         state_dict: Dict[str, torch.Tensor],
         global_params: Dict[str, torch.Tensor]
     ) -> torch.Tensor:
-        """
-        Compute flattened update delta: client_params - global_params
-        
-        Args:
-            state_dict: Client parameters
-            global_params: Global model parameters
-            
-        Returns:
-            Flattened delta tensor
-        """
         delta_list = []
         for key in sorted(state_dict.keys()):
             if key in global_params:
@@ -255,52 +138,21 @@ class AdaptiveBadNetClient(MaliciousClient):
         
         return torch.cat(delta_list)
     
-    def _clip_norm(
-        self,
-        delta: torch.Tensor,
-        server_round: int
-    ) -> torch.Tensor:
-        """
-        Clip update norm to appear within benign range.
-        
-        Estimates target norm based on historical data or conservative defaults.
-        Clips delta to not exceed (target_norm_scale * estimated_benign_norm).
-        
-        Args:
-            delta: Update delta tensor
-            server_round: Current round (for adaptive estimation)
-            
-        Returns:
-            Norm-clipped delta tensor
-        """
+    def _clip_norm(self, delta: torch.Tensor, server_round: int) -> torch.Tensor:
         current_norm = torch.linalg.norm(delta).item()
-        
-                                                   
-        if len(self.norm_history) > 0:
-                                                 
-            target_norm = np.percentile(self.norm_history, self.norm_clip_percentile)
+        if self.norm_history:
+            target_norm = np.percentile(self.norm_history, self.norm_clip_percentile) * self.target_norm_scale
         else:
-                                                           
             target_norm = current_norm * self.target_norm_scale
-        
-                                 
-        target_norm = target_norm * self.target_norm_scale
-        
-                                
-        if current_norm > target_norm and target_norm > 1e-9:
-            scale_factor = target_norm / current_norm
-            delta_clipped = delta * scale_factor
+
+        if current_norm > target_norm > 1e-9:
+            delta_clipped = delta * (target_norm / current_norm)
         else:
             delta_clipped = delta
-        
-                                                        
-                                                           
+
         self.norm_history.append(current_norm)
-        
-                              
         if len(self.norm_history) > 50:
             self.norm_history.pop(0)
-        
         return delta_clipped
     
     def _align_direction(
@@ -309,94 +161,36 @@ class AdaptiveBadNetClient(MaliciousClient):
         global_params: Dict[str, torch.Tensor],
         weight: float
     ) -> torch.Tensor:
-        """
-        Align update direction with global model direction.
-        
-        Blends the malicious update direction with the global model's parameter
-        direction to increase TDA (Temporal Direction Alignment) score.
-        
-        Formula:
-        aligned_delta = (1 - weight) * delta + weight * global_direction
-        
-        Where global_direction = global_params (flattened and normalized)
-        
-        Args:
-            delta: Update delta tensor
-            global_params: Global model parameters
-            weight: Alignment weight [0-1]
-            
-        Returns:
-            Direction-aligned delta tensor
-        """
+        """Blend delta direction with global model direction to increase DAS score."""
         if weight <= 0.0 or weight >= 1.0:
-                                 
             if weight >= 1.0:
-                log(WARNING, f"Client [{self.client_id}] alignment_weight=1.0 means no attack!")
+                log(WARNING, f"Client [{self.client_id}] alignment_weight=1.0 disables the attack.")
             return delta
-        
-                                                          
-        global_flat = []
-        for key in sorted(global_params.keys()):
-            global_flat.append(global_params[key].to(self.device).flatten())
-        
-        if not global_flat:
-            return delta
-        
-        global_direction = torch.cat(global_flat)
-        
-                                    
-        global_norm = torch.linalg.norm(global_direction).clamp(min=1e-9)
-        global_direction_normalized = global_direction / global_norm
-        
-                                      
+
+        global_flat = torch.cat([global_params[k].to(self.device).flatten()
+                                  for k in sorted(global_params.keys())])
+        global_dir = global_flat / torch.linalg.norm(global_flat).clamp(min=1e-9)
+
         delta_norm = torch.linalg.norm(delta).clamp(min=1e-9)
-        
-                                   
-        delta_direction = delta / delta_norm
-        
-                          
-        blended_direction = (1 - weight) * delta_direction + weight * global_direction_normalized
-        
-                                                           
-        blended_norm = torch.linalg.norm(blended_direction).clamp(min=1e-9)
-        aligned_delta = (blended_direction / blended_norm) * delta_norm
-        
-        return aligned_delta
+        blended = (1 - weight) * (delta / delta_norm) + weight * global_dir
+        blended_norm = torch.linalg.norm(blended).clamp(min=1e-9)
+        return (blended / blended_norm) * delta_norm
     
     def _apply_delta(
         self,
         global_params: Dict[str, torch.Tensor],
         delta: torch.Tensor
     ) -> Dict[str, torch.Tensor]:
-        """
-        Reconstruct state dict from global params and delta.
-        
-        Args:
-            global_params: Global model parameters
-            delta: Flattened update delta
-            
-        Returns:
-            Reconstructed state dictionary
-        """
+        """Reconstruct state dict as global_params + delta (param-aligned)."""
         state_dict = {}
         offset = 0
-        
         for key in sorted(global_params.keys()):
-            global_param = global_params[key].to(self.device)
-            param_numel = global_param.numel()
-            
-                                               
-            if offset + param_numel <= delta.numel():
-                delta_slice = delta[offset:offset + param_numel]
-                delta_reshaped = delta_slice.reshape(global_param.shape)
-                
-                                                                             
-                state_dict[key] = global_param + delta_reshaped
+            g = global_params[key].to(self.device)
+            numel = g.numel()
+            if offset + numel <= delta.numel():
+                state_dict[key] = g + delta[offset:offset + numel].reshape(g.shape)
             else:
-                                                               
-                state_dict[key] = global_param
-            
-            offset += param_numel
-        
+                state_dict[key] = g
+            offset += numel
         return state_dict
 

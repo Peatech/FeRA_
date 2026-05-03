@@ -27,7 +27,6 @@ class ClientSideDefenseServer(UnweightedFedAvgServer):
     def __init__(self, server_config, server_type, eta, **kwargs):
         super().__init__(server_config, server_type, eta, **kwargs)
 
-
 class RobustAggregationServer(UnweightedFedAvgServer):
     """Base class for all robust aggregation defenses.
 
@@ -38,7 +37,6 @@ class RobustAggregationServer(UnweightedFedAvgServer):
 
     def __init__(self, server_config, server_type="robust_aggregation", eta=0.1, **kwargs):
         super().__init__(server_config, server_type, eta, **kwargs)
-
 
 MaliciousClientsIds = List[int]
 BenignClientsIds = List[int]
