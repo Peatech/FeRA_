@@ -1,15 +1,18 @@
 # Artifact Traceability — FeRA
 
-**Checkpoints.** Place pretrained checkpoints at:
-```
-checkpoints/<DATASET>_unweighted_fedavg/resnet18_round_<N>.pth
-```
+**Checkpoints.** A small sample checkpoint is included only to enable a quick local run:
 
-**Seeds.** Results are averaged over multiple random seeds (e.g. 42, 123, 1337, 2024).
+`checkpoints/CIFAR10_unweighted_fedavg/resnet18_round_2000_dir_0.9.pth`
 
----
+Full pretraining checkpoints used in the paper are stored on institutional systems and are not redistributed here, to preserve anonymity.
 
-## Performance Comparison on IID CIFAR-10 (`tab:iid_main`)
+**Seeds.** Reported results aggregate runs over multiple random seeds (e.g. 42, 123, 1337, 2024).
+
+**Training mode.** All experiments use `training_mode=sequential` unless a command explicitly sets `training_mode=parallel`.
+
+**Scratch training.** `checkpoint=null` starts training from scratch; supply a pretrained `.pth` for continued-training (post-pretrain attack) experiments.
+
+## Performance Comparison on IID CIFAR-10
 
 ```bash
 python main.py --config-name cifar10 \
@@ -18,7 +21,7 @@ python main.py --config-name cifar10 \
   atk_config.data_poison_method=<TRIGGER> \
   atk_config.model_poison_method=<ATTACK> \
   atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
-  alpha=0.9 num_rounds=100 seed=<SEED> \
+  alpha=1.0 num_rounds=100 seed=<SEED> \
   checkpoint=path_to_checkpoint
 ```
 
@@ -33,9 +36,7 @@ python main.py --config-name cifar10 \
 
 `<DEFENCE>`: `unweighted_fedavg`, `fera_visualize`, `multi_krum`, `foolsgold`, `flame`, `fltrust`, `robustlr`, `deepsight`
 
----
-
-## Performance on CIFAR-100 and Tiny-ImageNet (`tab:other_datasets`)
+## Performance on CIFAR-100 and Tiny-ImageNet
 
 ```bash
 # CIFAR-100
@@ -59,9 +60,7 @@ python main.py --config-name tinyimagenet \
   checkpoint=path_to_checkpoint
 ```
 
----
-
-## Performance under Non-IID Data Distributions (`tab:non_iid`)
+## Performance under Non-IID Data Distributions
 
 ```bash
 python main.py --config-name cifar10 \
@@ -74,9 +73,7 @@ python main.py --config-name cifar10 \
   checkpoint=path_to_checkpoint
 ```
 
----
-
-## Non-IID Severity Sweep across Seven Attacks (`tab:iid_sensitivity`)
+## Non-IID Severity Sweep across Seven Attacks
 
 ```bash
 python main.py --config-name cifar10 \
@@ -89,9 +86,7 @@ python main.py --config-name cifar10 \
   checkpoint=path_to_checkpoint
 ```
 
----
-
-## Cross-Silo FL — 10 Clients, Full Participation (`tab:cross_device`)
+## Cross-Silo FL — 10 Clients, Full Participation
 
 ```bash
 python main.py --config-name cifar10 \
@@ -101,13 +96,11 @@ python main.py --config-name cifar10 \
   atk_config.model_poison_method=base \
   atk_config.poison_start_round=2001 atk_config.poison_end_round=2101 \
   num_clients=10 num_clients_per_round=10 \
-  alpha=<0.9|0.5> num_rounds=100 seed=<SEED> \
+  alpha=<1.0|0.5> num_rounds=100 seed=<SEED> \
   checkpoint=path_to_checkpoint
 ```
 
----
-
-## A3FL on CIFAR-10 (`tab:a3fl_cifar10`)
+## A3FL on CIFAR-10
 
 ```bash
 python main.py --config-name cifar10 \
@@ -120,9 +113,7 @@ python main.py --config-name cifar10 \
   checkpoint=path_to_checkpoint
 ```
 
----
-
-## Adaptive BadNet Attack (`tab:adaptive_attacks`)
+## Adaptive BadNet Attack
 
 ```bash
 python main.py --config-name cifar10 \
@@ -135,9 +126,7 @@ python main.py --config-name cifar10 \
   checkpoint=path_to_checkpoint
 ```
 
----
-
-## Decorrelated Backdoor Attack (`tab:decorr_attack`)
+## Decorrelated Backdoor Attack
 
 ```bash
 python main.py --config-name cifar10 \
@@ -150,9 +139,7 @@ python main.py --config-name cifar10 \
   checkpoint=path_to_checkpoint
 ```
 
----
-
-## FeRA under No-Attack Conditions (`tab:no_attack_convergence`)
+## FeRA under No-Attack Conditions
 
 ```bash
 # FeRA
@@ -168,9 +155,7 @@ python main.py --config-name cifar10 \
   alpha=<1.0|0.5|0.2> num_rounds=100 seed=<SEED>
 ```
 
----
-
-## Poisoning Percentage Impact (`tab:poison_percentage`)
+## Poisoning Percentage Impact
 
 ```bash
 python main.py --config-name cifar10 \
@@ -184,9 +169,7 @@ python main.py --config-name cifar10 \
   checkpoint=path_to_checkpoint
 ```
 
----
-
-## EMNIST and FEMNIST Performance (`tab:mnist_family_shallow`)
+## EMNIST and FEMNIST Performance
 
 ```bash
 python main.py --config-name <emnist|femnist> \
@@ -197,9 +180,7 @@ python main.py --config-name <emnist|femnist> \
   num_rounds=100 seed=<SEED>
 ```
 
----
-
-## Defense Performance on MNIST and F-MNIST under DBA (`tab:more_datasets`)
+## Defense Performance on MNIST and F-MNIST under DBA
 
 ```bash
 python main.py --config-name <mnist|fmnist> \
@@ -210,9 +191,7 @@ python main.py --config-name <mnist|fmnist> \
   num_rounds=100 seed=<SEED>
 ```
 
----
-
-## MNIST Performance (`tab:mnist_defended`)
+## MNIST Performance
 
 ```bash
 python main.py --config-name mnist \
@@ -223,9 +202,7 @@ python main.py --config-name mnist \
   num_rounds=100 seed=<SEED>
 ```
 
----
-
-## GTSRB Performance (`fig:gtsrb`)
+## FeRA performance on GTSRB
 
 ```bash
 python main.py --config-name gtsrb \
@@ -236,9 +213,7 @@ python main.py --config-name gtsrb \
   alpha=0.5 num_rounds=100 seed=<SEED>
 ```
 
----
-
-## Detection Mechanism Ablation (`tab:ablation`)
+## Detection Mechanism Ablation
 
 ```bash
 python main.py --config-name cifar10 \
@@ -253,9 +228,7 @@ python main.py --config-name cifar10 \
   checkpoint=path_to_checkpoint
 ```
 
----
-
-## Root Dataset Size Sensitivity (`tab:root_size`)
+## Root Dataset Size Sensitivity
 
 ```bash
 python main.py --config-name cifar10 \
@@ -269,9 +242,7 @@ python main.py --config-name cifar10 \
   checkpoint=path_to_checkpoint
 ```
 
----
-
-## Root Dataset Size Sensitivity — OOD Root (`tab:root_size_ood`)
+## Root Dataset Size Sensitivity — OOD Root
 
 ```bash
 python main.py --config-name cifar10 \
@@ -287,9 +258,7 @@ python main.py --config-name cifar10 \
   checkpoint=path_to_checkpoint
 ```
 
----
-
-## Performance across Model Architectures (`tab:architectures`)
+## Performance across Model Architectures
 
 ```bash
 python main.py --config-name cifar10 \
@@ -302,9 +271,7 @@ python main.py --config-name cifar10 \
   alpha=0.5 num_rounds=250 seed=<SEED>
 ```
 
----
-
-## Representation Extraction Depth (`tab:layer_selection`)
+## Representation Extraction Depth
 
 ```bash
 python main.py --config-name cifar10 \
@@ -318,9 +285,7 @@ python main.py --config-name cifar10 \
   checkpoint=path_to_checkpoint
 ```
 
----
-
-## Feature Dimension Impact (`tab:feature_dimension`)
+## Feature Dimension Impact
 
 ```bash
 python main.py --config-name cifar10 \
@@ -334,9 +299,7 @@ python main.py --config-name cifar10 \
   checkpoint=path_to_checkpoint
 ```
 
----
-
-## DAS Combined Score Weight Ablation (`tab:weight_ablation`)
+## DAS Combined Score Weight Ablation
 
 ```bash
 python main.py --config-name cifar10 \
@@ -357,9 +320,7 @@ python main.py --config-name cifar10 \
   checkpoint=path_to_checkpoint
 ```
 
----
-
-## Consistency Filter Threshold Sensitivity (`tab:consistency_ablation`)
+## Consistency Filter Threshold Sensitivity
 
 ```bash
 python main.py --config-name cifar10 \
@@ -375,9 +336,7 @@ python main.py --config-name cifar10 \
   checkpoint=path_to_checkpoint
 ```
 
----
-
-## Norm-Inflation Filter MAD Threshold Ablation (`tab:fera-norm-ablation`)
+## Norm-Inflation Filter MAD Threshold Ablation
 
 ```bash
 python main.py --config-name cifar10 \
@@ -395,9 +354,7 @@ python main.py --config-name cifar10 \
   checkpoint=path_to_checkpoint
 ```
 
----
-
-## BSP versus Discard Aggregation (`tab:bsp_vs_discard`)
+## BSP versus Discard Aggregation
 
 ```bash
 python main.py --config-name cifar10 \
@@ -410,16 +367,3 @@ python main.py --config-name cifar10 \
   alpha=0.5 num_rounds=100 seed=<SEED> \
   checkpoint=path_to_checkpoint
 ```
-
----
-
-## Key Source Files
-
-| File | Role |
-|------|------|
-| `main.py` | Experiment entry point (Hydra) |
-| `config/base.yaml` | FeRA hyperparameter defaults |
-| `backfed/servers/fera_visualize_server.py` | FeRA detection and aggregation |
-| `backfed/servers/defense_categories.py` | FPR / detection metrics |
-| `backfed/clients/adaptive_badnet_client.py` | Adaptive BadNet (`tab:adaptive_attacks`) |
-| `backfed/clients/decorrelated_malicious_client.py` | Decorrelated attack (`tab:decorr_attack`) |
